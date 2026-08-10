@@ -75,3 +75,59 @@ def generate_json(system_prompt: str, user_prompt: str) -> LLMResponse:
     if PROVIDER == "gemini":
         return _gemini_generate(system_prompt, user_prompt)
     return _groq_generate(system_prompt, user_prompt)
+
+
+def groq_generate_with_tools(system_prompt: str, user_prompt: str, tools_spec: list, tool_impls: dict) -> LLMResponse:
+    """Groq-only: lets the model call a function (e.g. ticket lookup) before
+    producing its final JSON triage. One tool round-trip max, then a final
+    JSON-mode call to lock the output schema."""
+    import json as _json
+
+    from groq import Groq
+
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY environment variable is not set")
+    model = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+    client = Groq(api_key=api_key)
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    first = client.chat.completions.create(
+        model=model, messages=messages, tools=tools_spec, tool_choice="auto", temperature=0.1
+    )
+    msg = first.choices[0].message
+    total_in = first.usage.prompt_tokens
+    total_out = first.usage.completion_tokens
+
+    if msg.tool_calls:
+        messages.append({"role": "assistant", "content": msg.content, "tool_calls": msg.tool_calls})
+        for call in msg.tool_calls:
+            fn = tool_impls.get(call.function.name)
+            args = _json.loads(call.function.arguments or "{}")
+            result = fn(**args) if fn else {"error": "unknown_tool"}
+            messages.append(
+                {"role": "tool", "tool_call_id": call.id, "content": _json.dumps(result)}
+            )
+
+        final = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_format={"type": "json_object"},
+            temperature=0.1,
+        )
+        total_in += final.usage.prompt_tokens
+        total_out += final.usage.completion_tokens
+        return LLMResponse(final.choices[0].message.content or "", total_in, total_out)
+
+    # No tool needed -> the first response should already be JSON-shaped text;
+    # force a clean JSON-mode call to be safe.
+    final = client.chat.completions.create(
+        model=model, messages=messages, response_format={"type": "json_object"}, temperature=0.1
+    )
+    total_in += final.usage.prompt_tokens
+    total_out += final.usage.completion_tokens
+    return LLMResponse(final.choices[0].message.content or "", total_in, total_out)

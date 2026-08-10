@@ -35,6 +35,9 @@ The 40-message set deliberately includes: a direct "ignore all previous instruct
 - **All 3 direct prompt-injection messages** (fake "ignore previous instructions" / fake system override / hidden instruction to leak the system prompt) were correctly classified as `abuse`, flagged `possible_prompt_injection` by the regex guardrail, capped at confidence ≤0.3, and force-routed to a human — none of them influenced their own triage outcome.
 - **Avg latency: ~1.2s/message.** **Avg tokens: ~552 in / ~73 out.** **Est. cost: ~$0.00008/message** (Groq's paid-tier equivalent rate; free tier itself is $0) — at that rate, 10,000 messages/day would cost under $1.
 
+## Optional: tool/function calling
+`tool_demo.py` demonstrates the model calling a real function instead of guessing. When a message references an existing ticket number (e.g. "checking in on ticket #48213"), the triage prompt gives the model a `lookup_ticket_status(ticket_id)` tool (`backend/tools.py`, mocked ticket store). Groq's function-calling API lets the model decide whether to call it; if it does, the real status is fed back before the model writes its final `summary`/`suggested_action`, so those fields are grounded in actual data rather than invented. This is implemented as an additive, isolated path (`llm_client.groq_generate_with_tools`) that doesn't touch the main triage pipeline, so it can't regress the already-verified 40-message batch. Run with `python tool_demo.py`.
+
 ## What I'd fix with more time
 - Add a second-pass "self-consistency" check (run ambiguous/low-confidence messages twice, compare) instead of a single sample, to catch cases where the model is confidently wrong rather than honestly uncertain.
 - Batch requests with true concurrency + a token-bucket rate limiter instead of a fixed sleep, to cut wall-clock time on larger datasets.
