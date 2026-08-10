@@ -35,17 +35,7 @@ Then get a **free Groq API key** (default provider — fast, generous free tier)
 
 **If every message comes back as `"unknown - triage failed"` with a `triage_error` flag**: this is the guardrail fail-safe working correctly on a real API failure, most likely Groq's free-tier **daily token quota** (100K tokens/day for `llama-3.3-70b-versatile`) being exhausted on your account — check the `error` field on any result (or `results.json`) for the exact message from the API. This quota is per-**account**, not per-key, so a new key won't fix it. Two options: wait for it to reset (rolling window — the API error tells you how long), or set `GROQ_MODEL=llama-3.1-8b-instant` in `.env`, which draws from a separate, larger free-tier quota (measured slightly less accurate — see the model comparison table below — but fully functional for continued testing).
 
-## 2. Run — CLI (fastest way to see it work)
-
-```bash
-python cli.py --eval
-```
-- Triages all 40 messages, prints a live results table
-- Saves full output to `results.json`
-- `--eval` scores the 10 ground-truth messages and saves `eval_report.json` (category/priority/needs_human accuracy, avg latency, avg tokens, est. cost/message)
-- `--delay <seconds>` to adjust the pacing (default 1.0s) if your tier allows faster or needs slower
-
-## 3. Run — Web dashboard
+## 2. Run — Web dashboard
 
 ```bash
 uvicorn backend.main:app --reload
@@ -58,6 +48,16 @@ Open http://127.0.0.1:8000
 - **Filters** — by priority, needs-human, guardrail-flagged, or free-text search
 - **Distribution panel** — visual breakdown of priority/category spread across the batch
 - **Tool-Call Demo button** — points to the standalone `tool_demo.py` script (see below)
+
+## 3. Run — CLI (fastest way to see it work)
+
+```bash
+python cli.py --eval
+```
+- Triages all 40 messages, prints a live results table
+- Saves full output to `results.json`
+- `--eval` scores the 10 ground-truth messages and saves `eval_report.json` (category/priority/needs_human accuracy, avg latency, avg tokens, est. cost/message)
+- `--delay <seconds>` to adjust the pacing (default 1.0s) if your tier allows faster or needs slower
 
 ## 4. Optional: tool/function-calling demo
 
