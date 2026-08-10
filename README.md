@@ -8,6 +8,8 @@ Reads raw, messy customer messages and turns each one into a structured triage d
 
 Built for the FRONTLINE One-Day AI Build Challenge — *"turn unstructured, messy, sometimes-adversarial input into structured decisions software can act on, and know when to call a human."*
 
+[![Watch the demo](docs/demo-thumbnail.png)](https://your-video-link-here)
+
 ## 1. Setup (~2 minutes)
 
 ```bash
