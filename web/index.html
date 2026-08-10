@@ -2,57 +2,259 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>FRONTLINE Triage Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FRONTLINE — Triage Control</title>
 <style>
   :root {
-    --bg: #0b0e14; --panel: #121722; --border: #232a3a; --text: #e6e9ef;
-    --muted: #8b93a7; --accent: #5b8cff; --p0: #ff5470; --p1: #ff9f43;
-    --p2: #ffd166; --p3: #6bcB77; --human: #ff5470;
+    --ink: #0a0c10;
+    --panel: #12151b;
+    --panel-2: #171b23;
+    --line: #262b35;
+    --line-soft: #1c212a;
+    --text: #e8ebf1;
+    --muted: #7d8699;
+    --dim: #545c6d;
+    --amber: #ff9d2e;
+    --amber-dim: #ff9d2e33;
+    --green: #4ade80;
+    --green-dim: #4ade8022;
+    --red: #ff5f6d;
+    --red-dim: #ff5f6d22;
+    --blue: #5ea1ff;
+    --blue-dim: #5ea1ff22;
+    --violet: #b58cff;
+    --mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, "SFMono-Regular", monospace;
+    --sans: -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
   }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
-  header { padding: 20px 28px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-  header h1 { font-size: 18px; margin:0; font-weight:600; }
-  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
-  .actions { display:flex; gap:10px; }
-  button { background:var(--accent); color:white; border:none; padding:9px 16px; border-radius:6px; font-size:13px; cursor:pointer; font-weight:600; }
-  button.secondary { background:transparent; border:1px solid var(--border); color:var(--text); }
-  button:disabled { opacity:0.5; cursor:not-allowed; }
-  main { padding: 24px 28px; }
-  .stats { display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
-  .stat { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 16px; min-width:130px; }
-  .stat .v { font-size:20px; font-weight:700; }
-  .stat .l { font-size:12px; color:var(--muted); margin-top:2px; }
-  table { width:100%; border-collapse: collapse; background:var(--panel); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
-  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:top; }
-  th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
-  tr:last-child td { border-bottom:none; }
-  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; }
-  .P0 { background:rgba(255,84,112,0.15); color:var(--p0); }
-  .P1 { background:rgba(255,159,67,0.15); color:var(--p1); }
-  .P2 { background:rgba(255,209,102,0.15); color:var(--p2); }
-  .P3 { background:rgba(107,203,119,0.15); color:var(--p3); }
-  .human { color: var(--human); font-weight:700; }
-  .filters { display:flex; gap:8px; margin-bottom:14px; }
-  .filters select { background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; }
-  #status { color:var(--muted); font-size:13px; margin-bottom:12px; }
-  .flags { font-size:11px; color:var(--muted); }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--ink); color: var(--text); font-family: var(--sans);
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-attachment: fixed;
+  }
+  ::selection { background: var(--amber-dim); }
+
+  /* ---------- top bar ---------- */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; border-bottom: 1px solid var(--line);
+    background: rgba(10,12,16,0.9); backdrop-filter: blur(10px);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark {
+    width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, var(--amber), #ff5f2e);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; color: #1a0d00; font-size: 15px;
+    box-shadow: 0 0 24px var(--amber-dim);
+  }
+  .brand h1 { font-size: 15px; margin: 0; letter-spacing: 0.06em; font-weight: 700; text-transform: uppercase; }
+  .brand .tag { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 1px; }
+  .top-actions { display: flex; align-items: center; gap: 10px; }
+  .meta-badge {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .btn {
+    font-family: var(--sans); font-weight: 600; font-size: 12.5px; border: none; border-radius: 6px;
+    padding: 9px 16px; cursor: pointer; letter-spacing: 0.02em; transition: transform 0.1s, opacity 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: var(--amber); color: #1a0d00; }
+  .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+  .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+  .btn-ghost:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 22px 24px 60px; }
+  .status-line {
+    font-family: var(--mono); font-size: 12px; color: var(--muted); min-height: 18px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .status-line.active { color: var(--amber); }
+  .spinner {
+    width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line);
+    border-top-color: var(--amber); animation: spin 0.7s linear infinite; display: none;
+  }
+  .status-line.active .spinner { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- stat cards ---------- */
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 18px; }
+  .stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    position: relative; overflow: hidden;
+  }
+  .stat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent, var(--amber)); }
+  .stat .v { font-size: 26px; font-weight: 800; font-family: var(--mono); line-height: 1; }
+  .stat .l { font-size: 11px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ---------- eval scorecard ---------- */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+  .panel-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+  }
+  .panel-title .hint { font-weight: 400; text-transform: none; letter-spacing: 0; font-family: var(--mono); font-size: 11px; }
+
+  .eval-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 22px; }
+  .eval-bars { display: flex; flex-direction: column; gap: 12px; }
+  .eval-bar-row { display: grid; grid-template-columns: 140px 1fr 46px; align-items: center; gap: 10px; }
+  .eval-bar-row .label { font-size: 12.5px; color: var(--text); }
+  .eval-bar-track { height: 8px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+  .eval-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(.2,.8,.2,1); }
+  .eval-bar-row .pct { font-family: var(--mono); font-size: 12px; text-align: right; color: var(--muted); }
+
+  .eval-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-family: var(--mono); font-size: 11.5px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px; color: var(--text);
+  }
+  .chip b { color: var(--amber); }
+
+  .mismatch-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; }
+  .mismatch-item { font-size: 11.5px; color: var(--muted); font-family: var(--mono); padding: 6px 8px; background: var(--red-dim); border-left: 2px solid var(--red); border-radius: 3px; }
+
+  /* ---------- distribution charts ---------- */
+  .dist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .dist-bars { display: flex; flex-direction: column; gap: 8px; }
+  .dist-row { display: grid; grid-template-columns: 70px 1fr 26px; align-items: center; gap: 8px; font-size: 11.5px; }
+  .dist-row .k { color: var(--muted); font-family: var(--mono); }
+  .dist-track { height: 14px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
+  .dist-fill { height: 100%; border-radius: 3px; }
+  .dist-row .n { font-family: var(--mono); color: var(--muted); text-align: right; }
+
+  /* ---------- filters ---------- */
+  .filters { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+  .filters select, .filters input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 10px; font-size: 12px; font-family: var(--sans);
+  }
+  .filters input { flex: 1; min-width: 160px; }
+  .filters .count { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  /* ---------- split layout: queue + inspector ---------- */
+  .split { display: grid; grid-template-columns: 1fr 380px; gap: 16px; align-items: start; }
+  .queue { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .queue-scroll { max-height: 640px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    position: sticky; top: 0; background: var(--panel-2); text-align: left; font-size: 10.5px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 12px; border-bottom: 1px solid var(--line); z-index: 1;
+  }
+  tbody tr { cursor: pointer; border-bottom: 1px solid var(--line-soft); transition: background 0.1s; }
+  tbody tr:hover { background: var(--panel-2); }
+  tbody tr.selected { background: var(--amber-dim); }
+  tbody td { padding: 10px 12px; font-size: 12.5px; vertical-align: top; }
+  .id-cell { font-family: var(--mono); color: var(--dim); font-size: 11px; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 10.5px; font-weight: 700; font-family: var(--mono); }
+  .P0 { background: var(--red-dim); color: var(--red); }
+  .P1 { background: var(--amber-dim); color: var(--amber); }
+  .P2 { background: var(--blue-dim); color: var(--blue); }
+  .P3 { background: var(--green-dim); color: var(--green); }
+  .human-tag { color: var(--red); font-size: 10.5px; font-weight: 700; font-family: var(--mono); }
+  .conf-bar { width: 48px; height: 5px; border-radius: 3px; background: var(--panel-2); display: inline-block; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+  .conf-fill { height: 100%; }
+  .flag-pill { font-size: 9.5px; font-family: var(--mono); background: var(--violet); color: #1a0d2e; padding: 1px 6px; border-radius: 8px; margin-right: 4px; }
+
+  /* ---------- inspector ---------- */
+  .inspector {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px;
+    position: sticky; top: 76px; max-height: 640px; overflow-y: auto;
+  }
+  .inspector-empty { color: var(--dim); font-size: 12.5px; text-align: center; padding: 60px 10px; }
+  .inspector h3 { font-size: 13px; margin: 0 0 4px; font-family: var(--mono); color: var(--amber); }
+  .inspector .msg-id { font-size: 10.5px; color: var(--dim); font-family: var(--mono); margin-bottom: 14px; }
+  .insp-section { margin-bottom: 16px; }
+  .insp-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px; font-weight: 700; }
+  .insp-raw {
+    background: var(--panel-2); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px 12px;
+    font-size: 12px; line-height: 1.5; color: var(--text); white-space: pre-wrap; word-break: break-word;
+  }
+  .insp-fields { display: flex; flex-direction: column; gap: 8px; }
+  .insp-field { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+  .insp-field .k { color: var(--muted); }
+  .insp-field .v { text-align: right; font-family: var(--mono); }
+  .trace-item {
+    display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; color: var(--text);
+    padding: 8px 10px; background: var(--panel-2); border-radius: 6px; margin-bottom: 6px; border-left: 2px solid var(--dim);
+  }
+  .trace-item.warn { border-left-color: var(--red); }
+  .trace-item.ok { border-left-color: var(--green); }
+  .trace-icon { font-family: var(--mono); font-weight: 800; }
+
+  .gauge { display: flex; align-items: center; gap: 10px; }
+  .gauge-track { flex: 1; height: 8px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+  .gauge-fill { height: 100%; border-radius: 4px; }
+  .gauge-val { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+
+  footer {
+    text-align: center; color: var(--dim); font-size: 11px; font-family: var(--mono); padding: 30px 0 10px;
+  }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 980px) {
+    .split { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .eval-grid, .dist-grid { grid-template-columns: 1fr; }
+    .inspector { position: static; }
+  }
 </style>
 </head>
 <body>
+
 <header>
-  <div>
-    <h1>FRONTLINE Triage Dashboard</h1>
-    <p>Structured AI triage for messy customer messages</p>
+  <div class="brand">
+    <div class="mark">FL</div>
+    <div>
+      <h1>Frontline Triage Control</h1>
+      <div class="tag" id="metaBadge">loading model info…</div>
+    </div>
   </div>
-  <div class="actions">
-    <button id="runBtn">Run Triage</button>
-    <button id="evalBtn" class="secondary">Run Evaluation</button>
+  <div class="top-actions">
+    <div class="meta-badge"><span class="dot"></span> <span id="liveStatus">idle</span></div>
+    <button class="btn btn-ghost" id="toolBtn" title="Runs the ticket-lookup tool-calling demo">Tool-Call Demo</button>
+    <button class="btn btn-ghost" id="evalBtn">Run Evaluation</button>
+    <button class="btn btn-primary" id="runBtn">▶ Run Triage</button>
   </div>
 </header>
+
 <main>
-  <div id="status"></div>
+  <div class="status-line" id="statusLine"><span class="spinner"></span><span id="statusText">Ready. Click "Run Triage" to process all messages, or "Run Evaluation" to score against ground truth.</span></div>
+
   <div class="stats" id="stats"></div>
+
+  <div class="panel" id="evalPanel" style="display:none">
+    <div class="panel-title">Evaluation Scorecard <span class="hint" id="evalHint"></span></div>
+    <div class="eval-grid">
+      <div class="eval-bars" id="evalBars"></div>
+      <div>
+        <div class="eval-chips" id="evalChips"></div>
+        <div class="insp-label" style="margin-top:14px">Where it disagreed</div>
+        <div class="mismatch-list" id="mismatchList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="distPanel" style="display:none">
+    <div class="panel-title">Result Distribution</div>
+    <div class="dist-grid">
+      <div>
+        <div class="insp-label">Priority</div>
+        <div class="dist-bars" id="priorityDist"></div>
+      </div>
+      <div>
+        <div class="insp-label">Category</div>
+        <div class="dist-bars" id="categoryDist"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="filters">
     <select id="filterPriority">
       <option value="">All priorities</option>
@@ -61,95 +263,298 @@
     <select id="filterHuman">
       <option value="">All messages</option>
       <option value="true">Needs human only</option>
+      <option value="flagged">Guardrail-flagged only</option>
     </select>
+    <input id="searchBox" type="text" placeholder="Search message text…" />
+    <span class="count" id="rowCount"></span>
   </div>
-  <table>
-    <thead>
-      <tr><th>ID</th><th>Category</th><th>Priority</th><th>Human?</th><th>Conf.</th><th>Summary</th><th>Suggested Action</th><th>Flags</th></tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
+
+  <div class="split">
+    <div class="queue">
+      <div class="queue-scroll">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Category</th><th>Priority</th><th>Confidence</th><th>Human?</th><th>Summary</th><th>Flags</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="inspector" id="inspector">
+      <div class="inspector-empty">Select a message from the queue<br>to see its full decision trace —<br>raw text, guardrail reasoning,<br>and confidence breakdown.</div>
+    </div>
+  </div>
+
+  <footer>FRONTLINE Triage &middot; structured decisions, not chat &middot; see <a href="/AI_DECISIONS.md">AI_DECISIONS.md</a> for the design write-up</footer>
 </main>
+
 <script>
 let allResults = [];
+let messageById = {};
+let selectedId = null;
 
-function render() {
-  const pf = document.getElementById('filterPriority').value;
-  const hf = document.getElementById('filterHuman').value;
-  const rows = document.getElementById('rows');
-  rows.innerHTML = '';
-  const filtered = allResults.filter(r =>
-    (!pf || r.priority === pf) && (!hf || String(r.needs_human) === hf)
-  );
-  for (const r of filtered) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${r.id}</td>
-      <td>${r.category}</td>
-      <td><span class="badge ${r.priority}">${r.priority}</span></td>
-      <td>${r.needs_human ? '<span class="human">YES</span>' : ''}</td>
-      <td>${r.confidence.toFixed(2)}</td>
-      <td>${r.summary}</td>
-      <td>${r.suggested_action}</td>
-      <td class="flags">${(r.flags||[]).join(', ')}</td>
-    `;
-    rows.appendChild(tr);
-  }
-  const stats = document.getElementById('stats');
+const priorityColor = { P0: 'var(--red)', P1: 'var(--amber)', P2: 'var(--blue)', P3: 'var(--green)' };
+const categoryColors = ['var(--amber)', 'var(--blue)', 'var(--violet)', 'var(--green)', 'var(--red)', '#ffd166', 'var(--muted)'];
+
+function setStatus(text, active) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusLine').classList.toggle('active', !!active);
+  document.getElementById('liveStatus').textContent = active ? 'processing' : 'idle';
+}
+
+async function loadMeta() {
+  try {
+    const r = await fetch('/api/meta');
+    const m = await r.json();
+    document.getElementById('metaBadge').textContent = `${m.provider} / ${m.model} · ${m.dataset_size} messages`;
+  } catch (e) {}
+}
+
+async function loadMessages() {
+  const r = await fetch('/api/messages');
+  const msgs = await r.json();
+  messageById = Object.fromEntries(msgs.map(m => [m.id, m.text]));
+}
+
+function renderStats() {
   const total = allResults.length;
   const human = allResults.filter(r => r.needs_human).length;
   const p0 = allResults.filter(r => r.priority === 'P0').length;
+  const blocked = allResults.filter(r => (r.flags || []).includes('possible_prompt_injection')).length;
   const errors = allResults.filter(r => r.error).length;
-  stats.innerHTML = `
-    <div class="stat"><div class="v">${total}</div><div class="l">Total messages</div></div>
-    <div class="stat"><div class="v">${human}</div><div class="l">Flagged for human</div></div>
-    <div class="stat"><div class="v">${p0}</div><div class="l">P0 critical</div></div>
-    <div class="stat"><div class="v">${errors}</div><div class="l">Errors (fail-safe)</div></div>
+  const cards = [
+    { v: total, l: 'Total Triaged', c: 'var(--amber)' },
+    { v: human, l: 'Flagged For Human', c: 'var(--red)' },
+    { v: p0, l: 'P0 Critical', c: 'var(--red)' },
+    { v: blocked, l: 'Injections Blocked', c: 'var(--violet)' },
+    { v: errors, l: 'Fail-Safe Fallbacks', c: 'var(--dim)' },
+  ];
+  document.getElementById('stats').innerHTML = cards.map(c =>
+    `<div class="stat" style="--accent:${c.c}"><div class="v">${c.v}</div><div class="l">${c.l}</div></div>`
+  ).join('');
+}
+
+function renderDistributions() {
+  if (!allResults.length) { document.getElementById('distPanel').style.display = 'none'; return; }
+  document.getElementById('distPanel').style.display = '';
+  const total = allResults.length;
+
+  const byPriority = {};
+  ['P0','P1','P2','P3'].forEach(p => byPriority[p] = 0);
+  allResults.forEach(r => byPriority[r.priority] = (byPriority[r.priority]||0) + 1);
+  document.getElementById('priorityDist').innerHTML = Object.entries(byPriority).map(([k,v]) => `
+    <div class="dist-row">
+      <div class="k">${k}</div>
+      <div class="dist-track"><div class="dist-fill" style="width:${total?v/total*100:0}%; background:${priorityColor[k]}"></div></div>
+      <div class="n">${v}</div>
+    </div>`).join('');
+
+  const byCat = {};
+  allResults.forEach(r => byCat[r.category] = (byCat[r.category]||0) + 1);
+  const catEntries = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  document.getElementById('categoryDist').innerHTML = catEntries.map(([k,v], i) => `
+    <div class="dist-row">
+      <div class="k">${k}</div>
+      <div class="dist-track"><div class="dist-fill" style="width:${total?v/total*100:0}%; background:${categoryColors[i % categoryColors.length]}"></div></div>
+      <div class="n">${v}</div>
+    </div>`).join('');
+}
+
+function renderTable() {
+  const pf = document.getElementById('filterPriority').value;
+  const hf = document.getElementById('filterHuman').value;
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const rows = document.getElementById('rows');
+  rows.innerHTML = '';
+
+  const filtered = allResults.filter(r => {
+    if (pf && r.priority !== pf) return false;
+    if (hf === 'true' && !r.needs_human) return false;
+    if (hf === 'flagged' && !(r.flags && r.flags.length)) return false;
+    if (q) {
+      const text = (messageById[r.id] || '') + ' ' + r.summary + ' ' + r.id;
+      if (!text.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('rowCount').textContent = `${filtered.length} / ${allResults.length} shown`;
+
+  for (const r of filtered) {
+    const tr = document.createElement('tr');
+    if (r.id === selectedId) tr.classList.add('selected');
+    const confColor = r.confidence >= 0.7 ? 'var(--green)' : r.confidence >= 0.4 ? 'var(--amber)' : 'var(--red)';
+    const flagsHtml = (r.flags || []).map(f => `<span class="flag-pill">${f.replace(/_/g,' ')}</span>`).join('');
+    tr.innerHTML = `
+      <td class="id-cell">${r.id}</td>
+      <td>${r.category}</td>
+      <td><span class="badge ${r.priority}">${r.priority}</span></td>
+      <td><span class="conf-bar"><span class="conf-fill" style="width:${r.confidence*100}%; background:${confColor}"></span></span>${r.confidence.toFixed(2)}</td>
+      <td>${r.needs_human ? '<span class="human-tag">● HUMAN</span>' : ''}</td>
+      <td>${r.summary}</td>
+      <td>${flagsHtml}</td>
+    `;
+    tr.onclick = () => { selectedId = r.id; renderTable(); renderInspector(r); };
+    rows.appendChild(tr);
+  }
+}
+
+function flagExplanation(flag) {
+  const map = {
+    possible_prompt_injection: { icon: '⛔', cls: 'warn', text: 'Regex guardrail detected manipulation language (e.g. "ignore instructions", "developer mode"). Forced needs_human=true and capped confidence, independent of what the model itself claimed.' },
+    low_confidence: { icon: '⚠', cls: 'warn', text: 'Model confidence fell below the 0.6 threshold. Code-level rule forces human review regardless of the model\'s own needs_human flag.' },
+    empty_message: { icon: '∅', cls: 'warn', text: 'Message had no usable content. Routed to human rather than triaged with false confidence.' },
+    triage_error: { icon: '✕', cls: 'warn', text: 'API call, JSON parsing, or schema validation failed. Fail-safe object returned instead of crashing the batch.' },
+  };
+  return map[flag] || { icon: '•', cls: '', text: flag };
+}
+
+function renderInspector(r) {
+  const text = messageById[r.id] || '(message text unavailable)';
+  const confColor = r.confidence >= 0.7 ? 'var(--green)' : r.confidence >= 0.4 ? 'var(--amber)' : 'var(--red)';
+  const flags = r.flags || [];
+
+  let trace = '';
+  if (flags.length) {
+    trace = flags.map(f => {
+      const e = flagExplanation(f);
+      return `<div class="trace-item ${e.cls}"><span class="trace-icon">${e.icon}</span><span>${e.text}</span></div>`;
+    }).join('');
+  } else {
+    trace = `<div class="trace-item ok"><span class="trace-icon">✓</span><span>No guardrail intervened — model's own classification and confidence were used as-is.</span></div>`;
+  }
+  if (r.error) {
+    trace += `<div class="trace-item warn"><span class="trace-icon">✕</span><span>Error: ${r.error}</span></div>`;
+  }
+
+  document.getElementById('inspector').innerHTML = `
+    <h3>Decision Trace</h3>
+    <div class="msg-id">${r.id}</div>
+
+    <div class="insp-section">
+      <div class="insp-label">Raw customer message</div>
+      <div class="insp-raw">${text || '(empty)'}</div>
+    </div>
+
+    <div class="insp-section">
+      <div class="insp-label">Model confidence</div>
+      <div class="gauge">
+        <div class="gauge-track"><div class="gauge-fill" style="width:${r.confidence*100}%; background:${confColor}"></div></div>
+        <div class="gauge-val" style="color:${confColor}">${r.confidence.toFixed(2)}</div>
+      </div>
+    </div>
+
+    <div class="insp-section">
+      <div class="insp-label">Structured decision</div>
+      <div class="insp-fields">
+        <div class="insp-field"><span class="k">Category</span><span class="v">${r.category}</span></div>
+        <div class="insp-field"><span class="k">Priority</span><span class="v"><span class="badge ${r.priority}">${r.priority}</span></span></div>
+        <div class="insp-field"><span class="k">Needs human</span><span class="v">${r.needs_human ? 'YES' : 'no'}</span></div>
+        <div class="insp-field"><span class="k">Latency</span><span class="v">${r.latency_ms ? r.latency_ms + ' ms' : '—'}</span></div>
+        <div class="insp-field"><span class="k">Tokens in/out</span><span class="v">${r.input_tokens ?? '—'}/${r.output_tokens ?? '—'}</span></div>
+      </div>
+    </div>
+
+    <div class="insp-section">
+      <div class="insp-label">Suggested action</div>
+      <div class="insp-raw">${r.suggested_action}</div>
+    </div>
+
+    <div class="insp-section">
+      <div class="insp-label">Guardrail trace (why this decision is trustworthy)</div>
+      ${trace}
+    </div>
   `;
 }
 
-document.getElementById('filterPriority').onchange = render;
-document.getElementById('filterHuman').onchange = render;
+function renderEval(report) {
+  document.getElementById('evalPanel').style.display = '';
+  document.getElementById('evalHint').textContent = `${report.n_evaluated} labeled messages · avg ${report.avg_latency_ms}ms · $${report.est_cost_per_message_usd}/msg`;
+
+  const bars = [
+    { label: 'Category match', v: report.category_accuracy, color: 'var(--amber)' },
+    { label: 'Priority match', v: report.priority_accuracy, color: 'var(--blue)' },
+    { label: 'Needs-human match', v: report.needs_human_accuracy, color: 'var(--green)' },
+  ];
+  document.getElementById('evalBars').innerHTML = bars.map(b => `
+    <div class="eval-bar-row">
+      <div class="label">${b.label}</div>
+      <div class="eval-bar-track"><div class="eval-bar-fill" style="width:${b.v*100}%; background:${b.color}"></div></div>
+      <div class="pct">${(b.v*100).toFixed(0)}%</div>
+    </div>`).join('');
+
+  document.getElementById('evalChips').innerHTML = `
+    <div class="chip">avg latency <b>${report.avg_latency_ms} ms</b></div>
+    <div class="chip">avg tokens <b>${report.avg_input_tokens}in / ${report.avg_output_tokens}out</b></div>
+    <div class="chip">est. cost <b>$${report.est_cost_per_message_usd}</b>/msg</div>
+    <div class="chip">at scale <b>~$${(report.est_cost_per_message_usd*10000).toFixed(2)}</b>/10k msgs</div>
+  `;
+
+  const mismatches = report.rows.filter(r => !r.category.match || !r.priority.match || !r.needs_human.match);
+  document.getElementById('mismatchList').innerHTML = mismatches.length
+    ? mismatches.map(r => `<div class="mismatch-item">${r.id}: expected ${r.category.expected}/${r.priority.expected} got ${r.category.got}/${r.priority.got}${r.needs_human.match ? '' : ' (needs_human mismatch)'}</div>`).join('')
+    : `<div class="mismatch-item" style="border-left-color:var(--green); background:var(--green-dim)">No mismatches — 100% agreement on all measured fields.</div>`;
+}
+
+document.getElementById('filterPriority').onchange = renderTable;
+document.getElementById('filterHuman').onchange = renderTable;
+document.getElementById('searchBox').oninput = renderTable;
+
+function startElapsedTicker(label) {
+  const t0 = Date.now();
+  const tick = () => setStatus(`${label} (${((Date.now()-t0)/1000).toFixed(0)}s elapsed — free-tier APIs are throttled on purpose to avoid rate-limit errors)`, true);
+  tick();
+  return setInterval(tick, 1000);
+}
 
 document.getElementById('runBtn').onclick = async () => {
   const btn = document.getElementById('runBtn');
-  btn.disabled = true; btn.textContent = 'Running...';
-  document.getElementById('status').textContent = 'Triaging all messages via Gemini, this may take a bit...';
+  btn.disabled = true;
+  const ticker = startElapsedTicker('Triaging all 40 messages one by one via the live model');
   try {
     const res = await fetch('/api/triage', { method: 'POST' });
     allResults = await res.json();
-    document.getElementById('status').textContent = `Done. ${allResults.length} messages triaged.`;
-    render();
+    clearInterval(ticker);
+    setStatus(`Done — ${allResults.length} messages triaged.`, false);
+    renderStats(); renderDistributions(); renderTable();
+    if (selectedId) { const r = allResults.find(x => x.id === selectedId); if (r) renderInspector(r); }
   } catch (e) {
-    document.getElementById('status').textContent = 'Error running triage: ' + e;
+    clearInterval(ticker);
+    setStatus('Error running triage: ' + e, false);
   }
-  btn.disabled = false; btn.textContent = 'Run Triage';
+  btn.disabled = false;
 };
 
 document.getElementById('evalBtn').onclick = async () => {
   const btn = document.getElementById('evalBtn');
-  btn.disabled = true; btn.textContent = 'Evaluating...';
-  document.getElementById('status').textContent = 'Running evaluation against ground truth...';
+  btn.disabled = true;
+  const ticker = startElapsedTicker(allResults.length ? 'Scoring against ground truth' : 'Triaging all 40 messages, then scoring against ground truth');
   try {
     const res = await fetch('/api/eval', { method: 'POST' });
     const report = await res.json();
-    document.getElementById('status').innerHTML =
-      `Eval: ${report.n_evaluated} msgs | Category acc: ${(report.category_accuracy*100).toFixed(1)}% | ` +
-      `Priority acc: ${(report.priority_accuracy*100).toFixed(1)}% | Human-flag acc: ${(report.needs_human_accuracy*100).toFixed(1)}% | ` +
-      `Avg latency: ${report.avg_latency_ms}ms | Est. cost/msg: $${report.est_cost_per_message_usd}`;
+    clearInterval(ticker);
+    renderEval(report);
     const resultsRes = await fetch('/api/results');
     allResults = await resultsRes.json();
-    render();
+    renderStats(); renderDistributions(); renderTable();
+    setStatus('Evaluation complete.', false);
   } catch (e) {
-    document.getElementById('status').textContent = 'Error running eval: ' + e;
+    clearInterval(ticker);
+    setStatus('Error running eval: ' + e, false);
   }
-  btn.disabled = false; btn.textContent = 'Run Evaluation';
+  btn.disabled = false;
+};
+
+document.getElementById('toolBtn').onclick = () => {
+  alert('The tool-calling demo (mock ticket-status lookup) runs standalone from the CLI:\n\n  python tool_demo.py\n\nSee AI_DECISIONS.md for what it demonstrates.');
 };
 
 (async () => {
+  await loadMeta();
+  await loadMessages();
   const res = await fetch('/api/results');
   allResults = await res.json();
-  render();
+  renderStats(); renderDistributions(); renderTable();
 })();
 </script>
 </body>

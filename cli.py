@@ -41,7 +41,7 @@ def main():
     parser.add_argument("--ground-truth", default="data/ground_truth.json")
     parser.add_argument("--out", default="results.json")
     parser.add_argument("--eval", action="store_true", help="run evaluation against ground truth")
-    parser.add_argument("--delay", type=float, default=4.0, help="seconds between API calls (rate-limit safety)")
+    parser.add_argument("--delay", type=float, default=1.0, help="seconds between API calls (rate-limit safety)")
     args = parser.parse_args()
 
     messages = load_json(args.messages)

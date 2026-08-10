@@ -69,9 +69,14 @@ def triage_message(msg_id: str, text: str) -> TriageResult:
             break
         except Exception as e:  # network / API errors must never crash the batch
             last_error = e
-            if "429" in str(e) and attempt < 3:
-                time.sleep(2 ** (attempt + 2))  # 4s, 8s, 16s backoff
+            err_text = str(e)
+            is_daily_quota = "per day" in err_text.lower() or "TPD" in err_text or "RPD" in err_text
+            is_transient_429 = "429" in err_text and not is_daily_quota
+            if is_transient_429 and attempt < 3:
+                time.sleep(2 ** (attempt + 2))  # 4s, 8s, 16s backoff for per-minute limits
                 continue
+            # Daily quota exhaustion won't resolve by retrying within the same
+            # call -- fail fast instead of burning ~28s of backoff for nothing.
             return _fallback_result(msg_id, f"api_error: {e}")
     if response is None:
         return _fallback_result(msg_id, f"api_error: {last_error}")

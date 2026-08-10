@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
@@ -26,6 +26,11 @@ app.add_middleware(
 
 _cache: dict = {"results": None, "eval": None}
 
+# Free-tier LLM APIs enforce per-minute rate limits; spacing calls out avoids
+# hammering into 429s (which cost more wall-clock time via retry/backoff than
+# a small fixed delay would). Override via REQUEST_DELAY_S if your tier allows faster.
+REQUEST_DELAY_S = float(os.environ.get("REQUEST_DELAY_S", "1.0"))
+
 
 def _load(name: str):
     with open(os.path.join(DATA_DIR, name), "r", encoding="utf-8") as f:
@@ -37,10 +42,23 @@ def get_messages():
     return _load("messages.json")
 
 
+@app.get("/api/ground_truth")
+def get_ground_truth():
+    return _load("ground_truth.json")
+
+
+@app.get("/api/meta")
+def get_meta():
+    provider = os.environ.get("LLM_PROVIDER", "groq").lower()
+    model = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile") if provider == "groq" \
+        else os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    return {"provider": provider, "model": model, "dataset_size": len(_load("messages.json"))}
+
+
 @app.post("/api/triage")
 def run_triage():
     messages = _load("messages.json")
-    results = triage_batch(messages)
+    results = triage_batch(messages, delay_s=REQUEST_DELAY_S)
     _cache["results"] = [r.model_dump() for r in results]
     return _cache["results"]
 
@@ -54,7 +72,7 @@ def get_results():
 def run_eval():
     if not _cache["results"]:
         messages = _load("messages.json")
-        results = triage_batch(messages)
+        results = triage_batch(messages, delay_s=REQUEST_DELAY_S)
         _cache["results"] = [r.model_dump() for r in results]
     from backend.schema import TriageResult
 
@@ -63,6 +81,12 @@ def run_eval():
     report = evaluate(results, gt)
     _cache["eval"] = report
     return report
+
+
+@app.get("/AI_DECISIONS.md")
+def get_ai_decisions():
+    path = os.path.join(ROOT, "AI_DECISIONS.md")
+    return PlainTextResponse(open(path, encoding="utf-8").read(), media_type="text/markdown")
 
 
 app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
