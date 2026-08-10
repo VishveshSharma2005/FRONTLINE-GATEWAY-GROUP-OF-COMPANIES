@@ -38,6 +38,19 @@ The 40-message set deliberately includes: a direct "ignore all previous instruct
 ### A live proof of the fail-safe layer, not just a design claim
 Later the same day, cumulative testing pushed this Groq account past its shared daily token quota for `llama-3.3-70b-versatile` (free-tier quotas are per-organization, not per-key — a fresh key on the same account doesn't reset them). Every subsequent call returned a real `429` from the live API. The pipeline did exactly what it's designed to do: no exception propagated, no batch failure — each message got a clean fallback object (`category=other, needs_human=true, confidence=0.0, flags=["triage_error"]`) with the real error message preserved for debugging. That's the fail-safe path being exercised by an actual failure, not just asserted in a docstring.
 
+### Model comparison: why `llama-3.3-70b-versatile` is the default, not the smaller model
+Once the 70B model's daily quota was exhausted, we re-ran the full 40-message batch on `llama-3.1-8b-instant` (a separate, independent free-tier quota) purely to keep testing during development. It's a legitimate data point, not just a workaround:
+
+| Metric | `llama-3.3-70b-versatile` | `llama-3.1-8b-instant` |
+|---|---|---|
+| Category accuracy | **100%** | 80% |
+| Priority accuracy | **90%** | 80% |
+| needs_human accuracy | **100%** | 70% |
+| Avg latency/message | ~1.2s | ~3.8s (varied more) |
+| Avg tokens in/out | ~552 / 73 | ~552 / 74 |
+
+The smaller model runs on the same guardrail pipeline and still never crashes or invents facts, but it's measurably worse at exactly the metric that matters most for a system meant to run unsupervised: `needs_human` accuracy dropped from 100% to 70%. That's the real reason `llama-3.3-70b-versatile` stays the committed default (`.env.example`, `backend/llm_client.py`) — a right-tool-for-the-job call backed by a measured before/after, not a guess. `GROQ_MODEL` is still swappable via `.env` for anyone who needs the lighter model's larger free-tier quota headroom during heavy repeated testing.
+
 ## Optional: tool/function calling
 `tool_demo.py` demonstrates the model calling a real function instead of guessing. When a message references an existing ticket number (e.g. "checking in on ticket #48213"), the triage prompt gives the model a `lookup_ticket_status(ticket_id)` tool (`backend/tools.py`, mocked ticket store). Groq's function-calling API lets the model decide whether to call it; if it does, the real status is fed back before the model writes its final `summary`/`suggested_action`, so those fields are grounded in actual data rather than invented. This is implemented as an additive, isolated path (`llm_client.groq_generate_with_tools`) that doesn't touch the main triage pipeline, so it can't regress the already-verified 40-message batch. Run with `python tool_demo.py`.
 
