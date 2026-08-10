@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>FRONTLINE Triage Dashboard</title>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #121722; --border: #232a3a; --text: #e6e9ef;
+    --muted: #8b93a7; --accent: #5b8cff; --p0: #ff5470; --p1: #ff9f43;
+    --p2: #ffd166; --p3: #6bcB77; --human: #ff5470;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
+  header { padding: 20px 28px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  header h1 { font-size: 18px; margin:0; font-weight:600; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  .actions { display:flex; gap:10px; }
+  button { background:var(--accent); color:white; border:none; padding:9px 16px; border-radius:6px; font-size:13px; cursor:pointer; font-weight:600; }
+  button.secondary { background:transparent; border:1px solid var(--border); color:var(--text); }
+  button:disabled { opacity:0.5; cursor:not-allowed; }
+  main { padding: 24px 28px; }
+  .stats { display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+  .stat { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 16px; min-width:130px; }
+  .stat .v { font-size:20px; font-weight:700; }
+  .stat .l { font-size:12px; color:var(--muted); margin-top:2px; }
+  table { width:100%; border-collapse: collapse; background:var(--panel); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; }
+  tr:last-child td { border-bottom:none; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+  .P0 { background:rgba(255,84,112,0.15); color:var(--p0); }
+  .P1 { background:rgba(255,159,67,0.15); color:var(--p1); }
+  .P2 { background:rgba(255,209,102,0.15); color:var(--p2); }
+  .P3 { background:rgba(107,203,119,0.15); color:var(--p3); }
+  .human { color: var(--human); font-weight:700; }
+  .filters { display:flex; gap:8px; margin-bottom:14px; }
+  .filters select { background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; }
+  #status { color:var(--muted); font-size:13px; margin-bottom:12px; }
+  .flags { font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>FRONTLINE Triage Dashboard</h1>
+    <p>Structured AI triage for messy customer messages</p>
+  </div>
+  <div class="actions">
+    <button id="runBtn">Run Triage</button>
+    <button id="evalBtn" class="secondary">Run Evaluation</button>
+  </div>
+</header>
+<main>
+  <div id="status"></div>
+  <div class="stats" id="stats"></div>
+  <div class="filters">
+    <select id="filterPriority">
+      <option value="">All priorities</option>
+      <option>P0</option><option>P1</option><option>P2</option><option>P3</option>
+    </select>
+    <select id="filterHuman">
+      <option value="">All messages</option>
+      <option value="true">Needs human only</option>
+    </select>
+  </div>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Category</th><th>Priority</th><th>Human?</th><th>Conf.</th><th>Summary</th><th>Suggested Action</th><th>Flags</th></tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</main>
+<script>
+let allResults = [];
+
+function render() {
+  const pf = document.getElementById('filterPriority').value;
+  const hf = document.getElementById('filterHuman').value;
+  const rows = document.getElementById('rows');
+  rows.innerHTML = '';
+  const filtered = allResults.filter(r =>
+    (!pf || r.priority === pf) && (!hf || String(r.needs_human) === hf)
+  );
+  for (const r of filtered) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${r.category}</td>
+      <td><span class="badge ${r.priority}">${r.priority}</span></td>
+      <td>${r.needs_human ? '<span class="human">YES</span>' : ''}</td>
+      <td>${r.confidence.toFixed(2)}</td>
+      <td>${r.summary}</td>
+      <td>${r.suggested_action}</td>
+      <td class="flags">${(r.flags||[]).join(', ')}</td>
+    `;
+    rows.appendChild(tr);
+  }
+  const stats = document.getElementById('stats');
+  const total = allResults.length;
+  const human = allResults.filter(r => r.needs_human).length;
+  const p0 = allResults.filter(r => r.priority === 'P0').length;
+  const errors = allResults.filter(r => r.error).length;
+  stats.innerHTML = `
+    <div class="stat"><div class="v">${total}</div><div class="l">Total messages</div></div>
+    <div class="stat"><div class="v">${human}</div><div class="l">Flagged for human</div></div>
+    <div class="stat"><div class="v">${p0}</div><div class="l">P0 critical</div></div>
+    <div class="stat"><div class="v">${errors}</div><div class="l">Errors (fail-safe)</div></div>
+  `;
+}
+
+document.getElementById('filterPriority').onchange = render;
+document.getElementById('filterHuman').onchange = render;
+
+document.getElementById('runBtn').onclick = async () => {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true; btn.textContent = 'Running...';
+  document.getElementById('status').textContent = 'Triaging all messages via Gemini, this may take a bit...';
+  try {
+    const res = await fetch('/api/triage', { method: 'POST' });
+    allResults = await res.json();
+    document.getElementById('status').textContent = `Done. ${allResults.length} messages triaged.`;
+    render();
+  } catch (e) {
+    document.getElementById('status').textContent = 'Error running triage: ' + e;
+  }
+  btn.disabled = false; btn.textContent = 'Run Triage';
+};
+
+document.getElementById('evalBtn').onclick = async () => {
+  const btn = document.getElementById('evalBtn');
+  btn.disabled = true; btn.textContent = 'Evaluating...';
+  document.getElementById('status').textContent = 'Running evaluation against ground truth...';
+  try {
+    const res = await fetch('/api/eval', { method: 'POST' });
+    const report = await res.json();
+    document.getElementById('status').innerHTML =
+      `Eval: ${report.n_evaluated} msgs | Category acc: ${(report.category_accuracy*100).toFixed(1)}% | ` +
+      `Priority acc: ${(report.priority_accuracy*100).toFixed(1)}% | Human-flag acc: ${(report.needs_human_accuracy*100).toFixed(1)}% | ` +
+      `Avg latency: ${report.avg_latency_ms}ms | Est. cost/msg: $${report.est_cost_per_message_usd}`;
+    const resultsRes = await fetch('/api/results');
+    allResults = await resultsRes.json();
+    render();
+  } catch (e) {
+    document.getElementById('status').textContent = 'Error running eval: ' + e;
+  }
+  btn.disabled = false; btn.textContent = 'Run Evaluation';
+};
+
+(async () => {
+  const res = await fetch('/api/results');
+  allResults = await res.json();
+  render();
+})();
+</script>
+</body>
+</html>

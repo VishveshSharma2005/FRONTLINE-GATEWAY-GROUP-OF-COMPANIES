@@ -1,0 +1,8 @@
+google-genai>=0.3.0
+groq>=0.11.0
+pydantic>=2.6
+fastapi>=0.110
+uvicorn[standard]>=0.29
+rich>=13.7
+python-dotenv>=1.0
+truststore>=0.9
