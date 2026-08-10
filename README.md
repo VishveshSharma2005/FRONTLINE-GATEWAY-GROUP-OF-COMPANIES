@@ -8,7 +8,7 @@ Reads raw, messy customer messages and turns each one into a structured triage d
 
 Built for the FRONTLINE One-Day AI Build Challenge — *"turn unstructured, messy, sometimes-adversarial input into structured decisions software can act on, and know when to call a human."*
 
-## [Watch the demo](https://drive.google.com/drive/u/0/folders/1QWyWrs55pLpArW5YL1yG5u9RRVTV2vfI)
+## [Click Here to watch Live demo](https://drive.google.com/drive/u/0/folders/1QWyWrs55pLpArW5YL1yG5u9RRVTV2vfI)
 
 ## 1. Setup (~2 minutes)
 
